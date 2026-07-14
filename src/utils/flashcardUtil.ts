@@ -89,13 +89,29 @@ export function useFlashcards() {
     });
   }, []);
 
+  const addInsight = useCallback(async (id: string, insight: string) => {
+    setData((prev) => {
+      const updated = prev.map((card) => {
+        if (card.id === id) {
+          const newInsights = card.insights
+            ? [insight, ...card.insights]
+            : [insight];
+          return { ...card, insights: newInsights };
+        }
+        return card;
+      });
+      saveFlashcards(updated);
+      return updated;
+    });
+  }, []);
+
   const clear = useCallback(async () => {
     setData([]);
     await saveFlashcards([]);
   }, []);
 
   return useMemo(
-    () => ({ data, isLoading, add, remove, updateStats, clear }),
-    [data, isLoading, add, remove, updateStats, clear],
+    () => ({ data, isLoading, add, remove, updateStats, addInsight, clear }),
+    [data, isLoading, add, remove, updateStats, addInsight, clear],
   );
 }

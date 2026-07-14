@@ -54,6 +54,7 @@ export interface Flashcard {
   term: string;
   definition: string;
   example?: string;
+  insights?: string[];
   createdAt: string;
   lastTestedAt?: string;
   correctCount: number;

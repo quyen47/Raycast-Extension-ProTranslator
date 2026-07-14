@@ -118,6 +118,24 @@ export class AIModule {
     }
   }
 
+  async generateVocabInsight(
+    term: string,
+    definition: string,
+  ): Promise<string> {
+    const prompt = `Act as an expert English Teacher. The user is practicing the vocabulary flashcard:
+Term: "${term}"
+Definition: "${definition}"
+
+Give the user ONE of the following (pick randomly to surprise them):
+1) Etymology & an interesting context of the word.
+2) 2 highly practical example sentences with Vietnamese translations.
+3) A fill-in-the-blank mini-exercise (give the sentence, hide the word, give translation).
+4) Common collocations and synonyms.
+
+Keep it extremely concise, engaging, and format it beautifully in Markdown. Do not include any JSON wrapping or markdown code blocks (e.g., no \`\`\`markdown).`;
+    return await this.aiRequest(prompt);
+  }
+
   private async aiRequest(prompt: string, retries = 3): Promise<string> {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {

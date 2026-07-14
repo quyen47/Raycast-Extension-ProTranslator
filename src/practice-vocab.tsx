@@ -8,18 +8,118 @@ import {
   useNavigation,
   showToast,
   Toast,
+  Detail,
 } from "@raycast/api";
 import { useFlashcards } from "./utils/flashcardUtil";
 import { Flashcard } from "./types";
+import { AIModule, getProviderConfig } from "./utils/providerUtil";
+import { playAudio } from "./utils/audioUtil";
+
+function InsightScreen({
+  flashcard,
+  onNext,
+  addInsight,
+}: {
+  flashcard: Flashcard;
+  onNext: () => void;
+  addInsight: (id: string, insight: string) => Promise<void>;
+}) {
+  const { pop } = useNavigation();
+  const [insight, setInsight] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchInsight() {
+      try {
+        const cachedInsights = flashcard.insights || [];
+        let shouldFetchNew = true;
+
+        if (cachedInsights.length >= 3) {
+          shouldFetchNew = Math.random() < 0.2; // 20% chance to fetch new
+        } else if (cachedInsights.length > 0) {
+          shouldFetchNew = Math.random() < 0.5; // 50% chance
+        }
+
+        if (!shouldFetchNew && cachedInsights.length > 0) {
+          const randomInsight =
+            cachedInsights[Math.floor(Math.random() * cachedInsights.length)];
+          if (isMounted) {
+            setInsight(randomInsight);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const config = getProviderConfig();
+        if (!config.apiKey) {
+          if (isMounted) {
+            setInsight(
+              "⚠️ Please set your API key in preferences to see AI Insights.",
+            );
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const ai = new AIModule(config);
+        const newInsight = await ai.generateVocabInsight(
+          flashcard.term,
+          flashcard.definition,
+        );
+
+        if (isMounted) {
+          setInsight(newInsight);
+          setIsLoading(false);
+        }
+
+        // Save to cache
+        await addInsight(flashcard.id, newInsight);
+      } catch (error) {
+        if (isMounted) {
+          setInsight(
+            "⚠️ Could not generate insight. Please check your internet or API key.",
+          );
+          setIsLoading(false);
+        }
+      }
+    }
+    fetchInsight();
+    return () => {
+      isMounted = false;
+    };
+  }, [flashcard]);
+
+  return (
+    <Detail
+      isLoading={isLoading}
+      markdown={insight || "✨ Generating AI Insight..."}
+      actions={
+        <ActionPanel>
+          <Action
+            title="Continue to Next Flashcard"
+            icon={Icon.Forward}
+            onAction={() => {
+              pop(); // Pop InsightScreen
+              onNext(); // This will trigger handleNext which pops QuizScreen
+            }}
+          />
+        </ActionPanel>
+      }
+    />
+  );
+}
 
 function QuizScreen({
   flashcard,
   onNext,
+  addInsight,
 }: {
   flashcard: Flashcard;
   onNext: (isCorrect: boolean) => void;
+  addInsight: (id: string, insight: string) => Promise<void>;
 }) {
-  const { pop } = useNavigation();
+  const { push, pop } = useNavigation();
   const [error, setError] = useState<string | undefined>();
   const [showResult, setShowResult] = useState(false);
   const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
@@ -35,8 +135,14 @@ function QuizScreen({
 
   function handleSubmit() {
     if (showResult) {
-      // Proceed to next card
-      onNext(isAnswerCorrect);
+      // Proceed to Insight Screen before next card
+      push(
+        <InsightScreen
+          flashcard={flashcard}
+          onNext={() => onNext(isAnswerCorrect)}
+          addInsight={addInsight}
+        />,
+      );
       return;
     }
 
@@ -143,7 +249,7 @@ function QuizScreen({
 }
 
 export default function PracticeVocabCommand() {
-  const { data, isLoading, remove, updateStats } = useFlashcards();
+  const { data, isLoading, remove, updateStats, addInsight } = useFlashcards();
   const [mode, setMode] = useState<"manage" | "quiz">("manage");
 
   // Quiz state
@@ -186,6 +292,7 @@ export default function PracticeVocabCommand() {
       <QuizScreen
         flashcard={randomCard}
         onNext={(isCorrect) => handleNext(randomCard.id, isCorrect)}
+        addInsight={addInsight}
       />,
     );
   }
@@ -221,6 +328,7 @@ export default function PracticeVocabCommand() {
           <QuizScreen
             flashcard={randomCard}
             onNext={(isC) => handleNext(randomCard.id, isC)}
+            addInsight={addInsight}
           />,
         );
       } else {
