@@ -129,13 +129,13 @@ You MUST return ONLY a valid JSON object with no markdown wrapping. Do not inclu
 Choose randomly between two types: "reading" or "exercise".
 
 If you choose "reading", provide ONE of the following (pick randomly):
-- Etymology & an interesting context of the word.
-- 2 highly practical example sentences with Vietnamese translations.
-- Common collocations and synonyms.
+- Cambridge Dictionary style definition: word type - pronunciation (IPA) - precise meaning - 1 clear example.
+- Root word analysis. If the word does not have a clear root word, pick another option.
+- Common collocations or language building blocks containing the word, with examples.
 Return this JSON format:
 {
   "type": "reading",
-  "markdown": "Your engaging explanation here. Do NOT use numbered lists like 1) 2). Just write beautifully."
+  "markdown": "Your engaging explanation here. Do NOT use numbered lists like 1) 2). Write beautifully in Vietnamese, except for the English examples."
 }
 
 If you choose "exercise", provide a fill-in-the-blank sentence where the target word "${term}" is missing.
