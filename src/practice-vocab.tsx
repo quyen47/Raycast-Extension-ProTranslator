@@ -15,6 +15,95 @@ import { Flashcard } from "./types";
 import { AIModule, getProviderConfig } from "./utils/providerUtil";
 import { playAudio } from "./utils/audioUtil";
 
+type InsightData = {
+  type: "reading" | "exercise";
+  markdown?: string;
+  question?: string;
+  answer?: string;
+  translation?: string;
+};
+
+function ExerciseScreen({
+  data,
+  onNext,
+}: {
+  data: InsightData;
+  onNext: () => void;
+}) {
+  const { pop } = useNavigation();
+  const [userAnswer, setUserAnswer] = useState("");
+  const [showResult, setShowResult] = useState(false);
+  const [error, setError] = useState<string>();
+
+  function handleSubmit() {
+    if (showResult) {
+      pop();
+      onNext();
+      return;
+    }
+    if (!userAnswer.trim()) {
+      setError("Please type your answer.");
+      return;
+    }
+    const correct = userAnswer.trim().toLowerCase() === data.answer!.toLowerCase();
+    if (correct) {
+      showToast({ title: "Correct!", style: Toast.Style.Success });
+      setShowResult(true);
+    } else {
+      setError("Incorrect! Try again.");
+    }
+  }
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title={showResult ? "Continue" : "Submit Answer"}
+            onSubmit={handleSubmit}
+          />
+          {showResult && (
+            <Action
+              title="Listen"
+              icon={Icon.SpeakerOn}
+              onAction={() => playAudio(data.answer!)}
+              shortcut={{ modifiers: ["cmd"], key: "p" }}
+            />
+          )}
+          <Action
+            title="Skip"
+            onAction={() => {
+              pop();
+              onNext();
+            }}
+            shortcut={{ modifiers: ["cmd"], key: "s" }}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.Description text="Fill in the blank with the word you just learned!" />
+      <Form.Separator />
+      <Form.Description text={`🇺🇸 ${data.question}`} />
+      <Form.Description text={`🇻🇳 ${data.translation}`} />
+
+      {!showResult ? (
+        <Form.TextField
+          id="ans"
+          title="Your Answer"
+          value={userAnswer}
+          onChange={(v) => {
+            setUserAnswer(v);
+            setError(undefined);
+          }}
+          error={error}
+        />
+      ) : (
+        <Form.Description text={`✅ Correct! The word is: ${data.answer}`} />
+      )}
+    </Form>
+  );
+}
+
 function InsightScreen({
   flashcard,
   onNext,
@@ -25,7 +114,7 @@ function InsightScreen({
   addInsight: (id: string, insight: string) => Promise<void>;
 }) {
   const { pop } = useNavigation();
-  const [insight, setInsight] = useState<string | null>(null);
+  const [insightData, setInsightData] = useState<InsightData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,44 +131,48 @@ function InsightScreen({
         }
 
         if (!shouldFetchNew && cachedInsights.length > 0) {
-          const randomInsight =
-            cachedInsights[Math.floor(Math.random() * cachedInsights.length)];
-          if (isMounted) {
-            setInsight(randomInsight);
-            setIsLoading(false);
-          }
-          return;
+           const randomInsightStr = cachedInsights[Math.floor(Math.random() * cachedInsights.length)];
+           if (isMounted) {
+             try {
+               setInsightData(JSON.parse(randomInsightStr));
+             } catch (e) {
+               setInsightData({ type: "reading", markdown: randomInsightStr });
+             }
+             setIsLoading(false);
+           }
+           return;
         }
 
         const config = getProviderConfig();
         if (!config.apiKey) {
-          if (isMounted) {
-            setInsight(
-              "⚠️ Please set your API key in preferences to see AI Insights.",
-            );
-            setIsLoading(false);
-          }
-          return;
+           if (isMounted) {
+             setInsightData({ type: "reading", markdown: "⚠️ Please set your API key in preferences to see AI Insights." });
+             setIsLoading(false);
+           }
+           return;
         }
 
         const ai = new AIModule(config);
-        const newInsight = await ai.generateVocabInsight(
-          flashcard.term,
-          flashcard.definition,
-        );
-
-        if (isMounted) {
-          setInsight(newInsight);
-          setIsLoading(false);
+        const newInsightStr = await ai.generateVocabInsight(flashcard.term, flashcard.definition);
+        
+        let parsed: InsightData;
+        try {
+          parsed = JSON.parse(newInsightStr.replace(/```json/g, "").replace(/```/g, ""));
+        } catch (e) {
+          parsed = { type: "reading", markdown: newInsightStr };
         }
 
-        // Save to cache
-        await addInsight(flashcard.id, newInsight);
+        if (isMounted) {
+          setInsightData(parsed);
+          setIsLoading(false);
+        }
+        
+        // Save to cache (save as string)
+        await addInsight(flashcard.id, JSON.stringify(parsed));
+
       } catch (error) {
         if (isMounted) {
-          setInsight(
-            "⚠️ Could not generate insight. Please check your internet or API key.",
-          );
+          setInsightData({ type: "reading", markdown: "⚠️ Could not generate insight. Please check your internet or API key." });
           setIsLoading(false);
         }
       }
@@ -90,10 +183,14 @@ function InsightScreen({
     };
   }, [flashcard]);
 
+  if (!isLoading && insightData?.type === "exercise") {
+    return <ExerciseScreen data={insightData} onNext={onNext} />;
+  }
+
   return (
     <Detail
       isLoading={isLoading}
-      markdown={insight || "✨ Generating AI Insight..."}
+      markdown={insightData?.markdown || "✨ Generating AI Insight..."}
       actions={
         <ActionPanel>
           <Action

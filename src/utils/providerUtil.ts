@@ -118,21 +118,34 @@ export class AIModule {
     }
   }
 
-  async generateVocabInsight(
-    term: string,
-    definition: string,
-  ): Promise<string> {
+  async generateVocabInsight(term: string, definition: string): Promise<string> {
     const prompt = `Act as an expert English Teacher. The user is practicing the vocabulary flashcard:
 Term: "${term}"
 Definition: "${definition}"
 
-Give the user ONE of the following (pick randomly to surprise them):
-1) Etymology & an interesting context of the word.
-2) 2 highly practical example sentences with Vietnamese translations.
-3) A fill-in-the-blank mini-exercise (give the sentence, hide the word, give translation).
-4) Common collocations and synonyms.
+Generate an insight or a mini-exercise for this word.
+You MUST return ONLY a valid JSON object with no markdown wrapping. Do not include \`\`\`json or \`\`\`.
 
-Keep it extremely concise, engaging, and format it beautifully in Markdown. Do not include any JSON wrapping or markdown code blocks (e.g., no \`\`\`markdown).`;
+Choose randomly between two types: "reading" or "exercise".
+
+If you choose "reading", provide ONE of the following (pick randomly):
+- Etymology & an interesting context of the word.
+- 2 highly practical example sentences with Vietnamese translations.
+- Common collocations and synonyms.
+Return this JSON format:
+{
+  "type": "reading",
+  "markdown": "Your engaging explanation here. Do NOT use numbered lists like 1) 2). Just write beautifully."
+}
+
+If you choose "exercise", provide a fill-in-the-blank sentence where the target word "${term}" is missing.
+Return this JSON format:
+{
+  "type": "exercise",
+  "question": "Sentence with a _____ where the word should be.",
+  "answer": "${term}",
+  "translation": "Vietnamese translation of the full sentence."
+}`;
     return await this.aiRequest(prompt);
   }
 
