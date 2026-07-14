@@ -45,6 +45,12 @@
       "title": "Fix Grammar Inline",
       "description": "Silently fix grammar of selected text and replace it directly.",
       "mode": "no-view"
+    },
+    {
+      "name": "quick-add-word",
+      "title": "Quick Add Word",
+      "description": "Quickly add selected text as a flashcard with AI definition.",
+      "mode": "view"
     }
   ],
   "preferences": [

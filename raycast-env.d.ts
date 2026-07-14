@@ -34,6 +34,8 @@ declare namespace Preferences {
   export type PracticeVocab = ExtensionPreferences & {}
   /** Preferences accessible in the `fix-inline` command */
   export type FixInline = ExtensionPreferences & {}
+  /** Preferences accessible in the `quick-add-word` command */
+  export type QuickAddWord = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
@@ -50,5 +52,7 @@ declare namespace Arguments {
   export type PracticeVocab = {}
   /** Arguments passed to the `fix-inline` command */
   export type FixInline = {}
+  /** Arguments passed to the `quick-add-word` command */
+  export type QuickAddWord = {}
 }
 

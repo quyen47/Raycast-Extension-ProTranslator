@@ -118,7 +118,10 @@ export class AIModule {
     }
   }
 
-  async generateVocabInsight(term: string, definition: string): Promise<string> {
+  async generateVocabInsight(
+    term: string,
+    definition: string,
+  ): Promise<string> {
     const prompt = `Act as an expert English Teacher. The user is practicing the vocabulary flashcard:
 Term: "${term}"
 Definition: "${definition}"
@@ -145,6 +148,16 @@ Return this JSON format:
   "question": "Sentence with a _____ where the word should be.",
   "answer": "${term}",
   "translation": "Vietnamese translation of the full sentence."
+}`;
+    return await this.aiRequest(prompt);
+  }
+
+  async defineWord(word: string): Promise<string> {
+    const prompt = `Give a concise definition for the word or phrase: "${word}".
+Return ONLY a valid JSON object in this format (no markdown code blocks):
+{
+  "definition": "Nghĩa tiếng Việt ngắn gọn nhất có thể. DO NOT put a period (.) at the end.",
+  "example": "Loại từ: (noun/verb/...)\\nPhát âm: /IPA/\\nVí dụ: English sentence.\\nDịch: Vietnamese translation."
 }`;
     return await this.aiRequest(prompt);
   }

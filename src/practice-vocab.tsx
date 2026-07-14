@@ -14,6 +14,7 @@ import { useFlashcards } from "./utils/flashcardUtil";
 import { Flashcard } from "./types";
 import { AIModule, getProviderConfig } from "./utils/providerUtil";
 import { playAudio } from "./utils/audioUtil";
+import FlashcardForm from "./components/FlashcardForm";
 
 type InsightData = {
   type: "reading" | "exercise";
@@ -45,7 +46,8 @@ function ExerciseScreen({
       setError("Please type your answer.");
       return;
     }
-    const correct = userAnswer.trim().toLowerCase() === data.answer!.toLowerCase();
+    const correct =
+      userAnswer.trim().toLowerCase() === data.answer!.toLowerCase();
     if (correct) {
       showToast({ title: "Correct!", style: Toast.Style.Success });
       setShowResult(true);
@@ -131,33 +133,43 @@ function InsightScreen({
         }
 
         if (!shouldFetchNew && cachedInsights.length > 0) {
-           const randomInsightStr = cachedInsights[Math.floor(Math.random() * cachedInsights.length)];
-           if (isMounted) {
-             try {
-               setInsightData(JSON.parse(randomInsightStr));
-             } catch (e) {
-               setInsightData({ type: "reading", markdown: randomInsightStr });
-             }
-             setIsLoading(false);
-           }
-           return;
+          const randomInsightStr =
+            cachedInsights[Math.floor(Math.random() * cachedInsights.length)];
+          if (isMounted) {
+            try {
+              setInsightData(JSON.parse(randomInsightStr));
+            } catch (e) {
+              setInsightData({ type: "reading", markdown: randomInsightStr });
+            }
+            setIsLoading(false);
+          }
+          return;
         }
 
         const config = getProviderConfig();
         if (!config.apiKey) {
-           if (isMounted) {
-             setInsightData({ type: "reading", markdown: "⚠️ Please set your API key in preferences to see AI Insights." });
-             setIsLoading(false);
-           }
-           return;
+          if (isMounted) {
+            setInsightData({
+              type: "reading",
+              markdown:
+                "⚠️ Please set your API key in preferences to see AI Insights.",
+            });
+            setIsLoading(false);
+          }
+          return;
         }
 
         const ai = new AIModule(config);
-        const newInsightStr = await ai.generateVocabInsight(flashcard.term, flashcard.definition);
-        
+        const newInsightStr = await ai.generateVocabInsight(
+          flashcard.term,
+          flashcard.definition,
+        );
+
         let parsed: InsightData;
         try {
-          parsed = JSON.parse(newInsightStr.replace(/```json/g, "").replace(/```/g, ""));
+          parsed = JSON.parse(
+            newInsightStr.replace(/```json/g, "").replace(/```/g, ""),
+          );
         } catch (e) {
           parsed = { type: "reading", markdown: newInsightStr };
         }
@@ -166,13 +178,16 @@ function InsightScreen({
           setInsightData(parsed);
           setIsLoading(false);
         }
-        
+
         // Save to cache (save as string)
         await addInsight(flashcard.id, JSON.stringify(parsed));
-
       } catch (error) {
         if (isMounted) {
-          setInsightData({ type: "reading", markdown: "⚠️ Could not generate insight. Please check your internet or API key." });
+          setInsightData({
+            type: "reading",
+            markdown:
+              "⚠️ Could not generate insight. Please check your internet or API key.",
+          });
           setIsLoading(false);
         }
       }
@@ -458,7 +473,18 @@ export default function PracticeVocabCommand() {
           {data.length === 0 ? (
             <List.EmptyView
               title="No Flashcards"
-              description="Save items from History to create flashcards."
+              description="Save items from History or create a new one to get started."
+              icon={Icon.Book}
+              actions={
+                <ActionPanel>
+                  <Action.Push
+                    title="Create Flashcard"
+                    icon={Icon.Plus}
+                    shortcut={{ modifiers: ["cmd"], key: "n" }}
+                    target={<FlashcardForm />}
+                  />
+                </ActionPanel>
+              }
             />
           ) : (
             data.map((card) => (
@@ -489,6 +515,12 @@ export default function PracticeVocabCommand() {
                       title="Start Cram Quiz (All)"
                       icon={Icon.Forward}
                       onAction={() => startQuiz("all")}
+                    />
+                    <Action.Push
+                      title="Create Flashcard"
+                      icon={Icon.Plus}
+                      shortcut={{ modifiers: ["cmd"], key: "n" }}
+                      target={<FlashcardForm />}
                     />
                     <Action
                       title="Delete Flashcard"

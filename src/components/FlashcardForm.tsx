@@ -14,11 +14,13 @@ import { Flashcard } from "../types";
 interface FlashcardFormProps {
   initialTerm?: string;
   initialDefinition?: string;
+  initialExample?: string;
 }
 
 export default function FlashcardForm({
   initialTerm = "",
   initialDefinition = "",
+  initialExample = "",
 }: FlashcardFormProps) {
   const { pop } = useNavigation();
   const { add } = useFlashcards();
@@ -90,6 +92,7 @@ export default function FlashcardForm({
         id="example"
         title="Example (Optional)"
         placeholder="e.g. I ate an apple today."
+        defaultValue={initialExample}
       />
     </Form>
   );
