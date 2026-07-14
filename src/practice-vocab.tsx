@@ -14,6 +14,7 @@ import { useFlashcards } from "./utils/flashcardUtil";
 import { Flashcard } from "./types";
 import { AIModule, getProviderConfig } from "./utils/providerUtil";
 import { playAudio } from "./utils/audioUtil";
+import { useStories, SavedStory } from "./utils/storyUtil";
 import FlashcardForm from "./components/FlashcardForm";
 
 type InsightData = {
@@ -23,6 +24,103 @@ type InsightData = {
   answer?: string;
   translation?: string;
 };
+
+function StoryScreen({ words, topic, onSave }: { words: Flashcard[]; topic: string; onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void }) {
+  const [data, setData] = useState<{ english_text: string; vietnamese_translation: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function run() {
+      try {
+        const config = getProviderConfig();
+        if (!config.apiKey) throw new Error("Please set API key in preferences.");
+        const ai = new AIModule(config);
+        const res = await ai.generateStory(words.map(w => ({ term: w.term, definition: w.definition })), topic);
+        const parsed = JSON.parse(res.replace(/```json/g, "").replace(/```/g, ""));
+        if (isMounted) {
+          setData(parsed);
+          setIsLoading(false);
+          onSave({
+            topic: topic || "Daily Story",
+            english_text: parsed.english_text,
+            vietnamese_translation: parsed.vietnamese_translation,
+            words: words.map(w => ({ term: w.term, definition: w.definition })),
+          });
+          setSaved(true);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(String(err));
+          setIsLoading(false);
+        }
+      }
+    }
+    run();
+    return () => { isMounted = false; };
+  }, [words, topic]);
+
+  if (error) return <Detail markdown={`⚠️ Lỗi khi tạo bài đọc: ${error}`} />;
+
+  const markdown = data ? `
+${data.english_text}
+
+---
+### 🇻🇳 Bản dịch
+${data.vietnamese_translation}
+
+---
+### 📚 Từ vựng trong bài
+` + words.map(w => "- **" + w.term + "**: " + w.definition).join("\n") : "✨ Tác giả AI đang suy nghĩ cốt truyện và viết nháp...";
+
+  return <Detail isLoading={isLoading} markdown={markdown} />;
+}
+
+function StoryPromptForm({ activeCards, dueCards, onSave }: { activeCards: Flashcard[]; dueCards: Flashcard[]; onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void }) {
+  const { push } = useNavigation();
+  const [topic, setTopic] = useState("");
+  const [pool, setPool] = useState("due");
+  const [wordCount, setWordCount] = useState("10");
+
+  function handleSubmit() {
+    const source = pool === "due" ? dueCards : activeCards;
+    if (source.length === 0) {
+      showToast({ title: "Không có từ vựng nào trong danh sách này.", style: Toast.Style.Failure });
+      return;
+    }
+    const count = parseInt(wordCount, 10);
+    // shuffle and pick
+    const shuffled = [...source].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, count);
+
+    push(<StoryScreen words={selected} topic={topic} onSave={onSave} />);
+  }
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Tạo Bài Đọc" onSubmit={handleSubmit} />
+        </ActionPanel>
+      }
+    >
+      <Form.Description text="Tạo một bài đọc tiếng Anh từ các từ vựng của bạn để ôn tập theo ngữ cảnh." />
+      <Form.Dropdown id="pool" title="Nguồn từ vựng" value={pool} onChange={setPool}>
+        <Form.Dropdown.Item value="due" title={"Đến hạn ôn tập (" + dueCards.length + " từ)"} />
+        <Form.Dropdown.Item value="all" title={"Tất cả từ vựng (" + activeCards.length + " từ)"} />
+      </Form.Dropdown>
+      <Form.Dropdown id="count" title="Số lượng từ" value={wordCount} onChange={setWordCount}>
+        <Form.Dropdown.Item value="5" title="5 từ (Ngắn gọn)" />
+        <Form.Dropdown.Item value="10" title="10 từ (Vừa đủ)" />
+        <Form.Dropdown.Item value="15" title="15 từ (Khá dài)" />
+        <Form.Dropdown.Item value="20" title="20 từ (Dài)" />
+      </Form.Dropdown>
+      <Form.TextField id="topic" title="Chủ đề (Tuỳ chọn)" placeholder="VD: Khoa học vũ trụ, Chuyện kinh dị, Tình yêu..." value={topic} onChange={setTopic} />
+    </Form>
+  );
+}
 
 function ExerciseScreen({
   data,
@@ -360,12 +458,11 @@ function QuizScreen({
   );
 }
 
-export default function PracticeVocabCommand() {
-  const { data, isLoading, remove, updateStats, addInsight } = useFlashcards();
-  const [mode, setMode] = useState<"manage" | "quiz">("manage");
-
-  // Quiz state
+export default function PracticeCommand() {
+  const { data, isLoading, addInsight, updateStats, remove } = useFlashcards();
+  const { stories, isLoadingStories, addStory, removeStory } = useStories();
   const { push, pop } = useNavigation();
+  const [mode, setMode] = useState<"manage" | "quiz" | "stories">("manage");
   const quizFilterRef = React.useRef<"due" | "all">("due");
 
   function getActiveCards(filter: "due" | "all") {
@@ -453,18 +550,64 @@ export default function PracticeVocabCommand() {
 
   return (
     <List
-      isLoading={isLoading}
+      isLoading={isLoading || isLoadingStories}
+      isShowingDetail={mode === "manage" || mode === "stories"}
       searchBarAccessory={
         <List.Dropdown
           tooltip="Mode"
-          onChange={(val) => setMode(val as "manage" | "quiz")}
+          onChange={(val) => setMode(val as "manage" | "quiz" | "stories")}
           value={mode}
         >
           <List.Dropdown.Item title="Manage Flashcards" value="manage" />
           <List.Dropdown.Item title="Quiz Mode" value="quiz" />
+          <List.Dropdown.Item title="Saved Stories" value="stories" />
         </List.Dropdown>
       }
     >
+      {mode === "stories" && (
+        <List.Section title="Saved Stories" subtitle={`${stories.length} stories`}>
+          {stories.length === 0 ? (
+            <List.EmptyView title="No saved stories yet" icon={Icon.Book} />
+          ) : (
+            stories.map((story) => (
+              <List.Item
+                key={story.id}
+                title={story.topic}
+                subtitle={new Date(story.createdAt).toLocaleDateString()}
+                detail={
+                  <List.Item.Detail
+                    markdown={`# ${story.topic}\n\n${story.english_text}\n\n---\n\n### 🇻🇳 Bản dịch\n${story.vietnamese_translation}`}
+                    metadata={
+                      <List.Item.Detail.Metadata>
+                        <List.Item.Detail.Metadata.Label title="Created" text={new Date(story.createdAt).toLocaleString()} />
+                        <List.Item.Detail.Metadata.Separator />
+                        {story.words.map((w, idx) => (
+                          <List.Item.Detail.Metadata.Label key={idx} title={w.term} text={w.definition} />
+                        ))}
+                      </List.Item.Detail.Metadata>
+                    }
+                  />
+                }
+                actions={
+                  <ActionPanel>
+                    <Action
+                      title="Delete Story"
+                      icon={Icon.Trash}
+                      style={Action.Style.Destructive}
+                      shortcut={{ modifiers: ["ctrl"], key: "x" }}
+                      onAction={() => {
+                        removeStory(story.id);
+                        showToast({ title: "Story deleted" });
+                      }}
+                    />
+                  </ActionPanel>
+                }
+              />
+            ))
+          )}
+        </List.Section>
+      )}
+
       {mode === "manage" && (
         <List.Section
           title="Your Flashcards"
@@ -477,6 +620,11 @@ export default function PracticeVocabCommand() {
               icon={Icon.Book}
               actions={
                 <ActionPanel>
+                  <Action.Push
+                    title="Generate Story with AI"
+                    icon={Icon.TextDocument}
+                    target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
+                  />
                   <Action.Push
                     title="Create Flashcard"
                     icon={Icon.Plus}
@@ -494,16 +642,29 @@ export default function PracticeVocabCommand() {
                 subtitle={card.definition}
                 accessories={[
                   {
-                    text: card.dueDate
-                      ? new Date(card.dueDate).toLocaleDateString()
-                      : "",
-                    tooltip: "Next review",
-                  },
-                  {
                     text: `✅ ${card.correctCount}`,
                     tooltip: "Correct answers",
                   },
                 ]}
+                detail={
+                  <List.Item.Detail
+                    markdown={`# ${card.term}\n\n**Meaning:** ${card.definition}\n\n${card.example ? `**Example:**\n\n${card.example}` : ""}`}
+                    metadata={
+                      <List.Item.Detail.Metadata>
+                        <List.Item.Detail.Metadata.Label title="Interval" text={`${card.interval} days`} />
+                        <List.Item.Detail.Metadata.Label title="Ease Factor" text={card.easeFactor?.toString()} />
+                        <List.Item.Detail.Metadata.Label title="Correct" text={card.correctCount.toString()} />
+                        <List.Item.Detail.Metadata.Label title="Wrong" text={card.wrongCount.toString()} />
+                        {card.insights && card.insights.length > 0 && (
+                          <>
+                            <List.Item.Detail.Metadata.Separator />
+                            <List.Item.Detail.Metadata.Label title="AI Insights Cached" text={card.insights.length.toString()} />
+                          </>
+                        )}
+                      </List.Item.Detail.Metadata>
+                    }
+                  />
+                }
                 actions={
                   <ActionPanel>
                     <Action
@@ -515,6 +676,12 @@ export default function PracticeVocabCommand() {
                       title="Start Cram Quiz (All)"
                       icon={Icon.Forward}
                       onAction={() => startQuiz("all")}
+                    />
+                    <Action.Push
+                      title="Generate Story with AI"
+                      icon={Icon.TextDocument}
+                      shortcut={{ modifiers: ["cmd"], key: "g" }}
+                      target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
                     />
                     <Action.Push
                       title="Create Flashcard"
@@ -562,6 +729,12 @@ export default function PracticeVocabCommand() {
                   title="Start Cram Quiz (All Cards)"
                   icon={Icon.Forward}
                   onAction={() => startQuiz("all")}
+                />
+                <Action.Push
+                  title="Generate Story with AI"
+                  icon={Icon.TextDocument}
+                  shortcut={{ modifiers: ["cmd"], key: "g" }}
+                  target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
                 />
               </ActionPanel>
             }

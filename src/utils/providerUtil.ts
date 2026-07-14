@@ -162,6 +162,29 @@ Return ONLY a valid JSON object in this format (no markdown code blocks):
     return await this.aiRequest(prompt);
   }
 
+  async generateStory(words: { term: string; definition: string }[], topic: string): Promise<string> {
+    const wordList = words.map((w) => `- ${w.term} (${w.definition})`).join("\\n");
+    const topicInstruction = topic ? `The theme/topic of the story MUST BE: "${topic}".` : "You can choose any engaging and informative topic.";
+    
+    const prompt = `You are an expert English teacher and creative writer.
+I have a list of vocabulary words that I am learning:
+${wordList}
+
+Write a short, engaging reading passage (story or informative article) in English that naturally incorporates ALL the words listed above.
+${topicInstruction}
+
+Requirements:
+1. The text should be approx 200-400 words.
+2. Bold the target vocabulary words in the text using markdown (**word**).
+3. Do NOT just list sentences; weave them into a coherent narrative or essay.
+4. Return ONLY a valid JSON object in this format (no markdown code blocks like \`\`\`json):
+{
+  "english_text": "The full English reading passage.",
+  "vietnamese_translation": "A high-quality Vietnamese translation of the entire passage to help the learner."
+}`;
+    return await this.aiRequest(prompt, 2); // 2 retries max for speed
+  }
+
   private async aiRequest(prompt: string, retries = 3): Promise<string> {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
