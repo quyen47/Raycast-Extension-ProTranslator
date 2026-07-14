@@ -135,7 +135,7 @@ If you choose "reading", provide ONE of the following (pick randomly):
 Return this JSON format:
 {
   "type": "reading",
-  "markdown": "Your engaging explanation here. Do NOT use numbered lists like 1) 2). Write beautifully in Vietnamese, except for the English examples."
+  "markdown": "Your engaging explanation here. Do NOT use numbered lists like 1) 2). Write beautifully in Vietnamese, except for the English examples. MUST use blank lines (\\n\\n) to separate sections, bullet points, and paragraphs for readability."
 }
 
 If you choose "exercise", provide a fill-in-the-blank sentence where the target word "${term}" is missing.
