@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "grammar-pro",
-  "title": "Grammar Pro",
+  "name": "protranslator",
+  "title": "ProTranslator",
   "description": "Fix grammar, paraphrase, change tone, and continue text using multiple AI providers (OpenAI, Gemini, DeepSeek, Groq, or any OpenAI-compatible API).",
   "icon": "icon.png",
   "author": "quyen",
