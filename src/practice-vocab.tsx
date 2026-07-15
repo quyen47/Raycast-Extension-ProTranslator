@@ -368,7 +368,21 @@ function QuizScreen({
       return;
     }
 
-    // Fast path
+    // If guessing the TERM (vocab), we require strict matching to enforce correct spelling.
+    if (!isReverse) {
+      const isCorrect = userAnswer.trim().toLowerCase() === expectedAnswer.trim().toLowerCase();
+      setIsAnswerCorrect(isCorrect);
+      setShowResult(true);
+      setAiFeedback(undefined);
+      if (isCorrect) {
+        showToast({ style: Toast.Style.Success, title: "Correct!" });
+      } else {
+        showToast({ style: Toast.Style.Failure, title: "Incorrect" });
+      }
+      return;
+    }
+
+    // Fast path for DEFINITION
     if (isCloseMatch(userAnswer, expectedAnswer)) {
       setIsAnswerCorrect(true);
       setShowResult(true);

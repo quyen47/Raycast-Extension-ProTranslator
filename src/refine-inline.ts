@@ -10,7 +10,7 @@ export default async function Command() {
       return;
     }
 
-    await showHUD("✨ Fixing Grammar...");
+    await showHUD("✨ Refining Text...");
 
     const config = getProviderConfig();
     if (!config.apiKey) {
@@ -22,14 +22,11 @@ export default async function Command() {
     }
 
     const ai = new AIModule(config);
-    const result = await ai.fixGrammar(textToUse.trim());
+    const result = await ai.paraphrase(textToUse.trim());
 
-    // Extract just the fixed text (ignore explanation)
-    const fixedText = result.split("\n\n---EXPLANATION---\n\n")[0];
-
-    // Paste the fixed text back, overwriting the selection
-    await Clipboard.paste(fixedText);
-    await showHUD("✅ Grammar Fixed!");
+    // Paste the refined text back, overwriting the selection
+    await Clipboard.paste(result);
+    await showHUD("✅ Text Refined!");
   } catch (error) {
     await showToast({
       style: Toast.Style.Failure,

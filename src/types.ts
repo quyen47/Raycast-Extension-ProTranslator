@@ -3,6 +3,7 @@
 export enum CommandType {
   Fix = "Fix Grammar",
   Paraphrase = "Paraphrase",
+  Translate = "Translate",
   ToneChange = "Change Tone",
   ContinueText = "Continue Text",
 }

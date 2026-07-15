@@ -26,32 +26,28 @@ declare type Preferences = ExtensionPreferences
 declare namespace Preferences {
   /** Preferences accessible in the `improve-selected-text` command */
   export type ImproveSelectedText = ExtensionPreferences & {}
-  /** Preferences accessible in the `refine-and-translate` command */
-  export type RefineAndTranslate = ExtensionPreferences & {}
   /** Preferences accessible in the `history` command */
   export type History = ExtensionPreferences & {}
   /** Preferences accessible in the `practice-vocab` command */
   export type PracticeVocab = ExtensionPreferences & {}
-  /** Preferences accessible in the `fix-inline` command */
-  export type FixInline = ExtensionPreferences & {}
+  /** Preferences accessible in the `refine-inline` command */
+  export type RefineInline = ExtensionPreferences & {}
   /** Preferences accessible in the `quick-add-word` command */
   export type QuickAddWord = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
   /** Arguments passed to the `improve-selected-text` command */
-  export type ImproveSelectedText = {}
-  /** Arguments passed to the `refine-and-translate` command */
-  export type RefineAndTranslate = {
-  /** Text to refine & translate... */
+  export type ImproveSelectedText = {
+  /** Type text to fix, translate, or rewrite... */
   "text": string
 }
   /** Arguments passed to the `history` command */
   export type History = {}
   /** Arguments passed to the `practice-vocab` command */
   export type PracticeVocab = {}
-  /** Arguments passed to the `fix-inline` command */
-  export type FixInline = {}
+  /** Arguments passed to the `refine-inline` command */
+  export type RefineInline = {}
   /** Arguments passed to the `quick-add-word` command */
   export type QuickAddWord = {}
 }

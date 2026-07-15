@@ -59,7 +59,12 @@ export class AIModule {
   }
 
   async fixGrammar(text: string): Promise<string> {
-    const prompt = `Fix grammar and spelling mistakes in the following text. Do not rewrite it entirely, just fix errors. Return the result STRICTLY as a JSON object with two keys: "fixed" containing the fixed text, and "explanation" containing a concise bulleted list of grammar mistakes you found and fixed (in Vietnamese, or English if text is Vietnamese). If no errors were found, "explanation" should say "No errors found". Do not include any markdown formatting or backticks outside the JSON. Text: "${text}"`;
+    const prompt = `Fix grammar and spelling mistakes in the following text. Do not rewrite it entirely, just fix errors. Return the result STRICTLY as a JSON object with three keys: 
+1. "fixed": the fixed text.
+2. "annotated_original": the exact original text, but with the mistakes highlighted using bold (**mistake**) or strikethrough (~~mistake~~).
+3. "explanation": a concise bulleted list of grammar mistakes you found and fixed (in Vietnamese, or English if text is Vietnamese). If no errors were found, say "No errors found".
+
+Do not include any markdown formatting or backticks outside the JSON. Text: "${text}"`;
     const response = await this.aiRequest(prompt);
     try {
       const start = response.indexOf("{");
@@ -67,33 +72,58 @@ export class AIModule {
       if (start !== -1 && end !== -1) {
         const jsonStr = response.slice(start, end + 1);
         const parsed = JSON.parse(jsonStr);
-        return `${parsed.fixed}\n\n---EXPLANATION---\n\n${parsed.explanation}`;
+        return `${parsed.fixed}\n\n---ANNOTATED---\n\n${parsed.annotated_original || text}\n\n---EXPLANATION---\n\n${parsed.explanation}`;
       }
       return response;
     } catch {
-      // Fallback
       return response;
     }
   }
 
+  private stripUnwantedQuotes(original: string, result: string): string {
+    let finalResult = result.trim();
+    const origTrimmed = original.trim();
+    
+    const originalHasQuotes = 
+      (origTrimmed.startsWith('"') && origTrimmed.endsWith('"')) || 
+      (origTrimmed.startsWith("'") && origTrimmed.endsWith("'"));
+
+    if (!originalHasQuotes) {
+      if ((finalResult.startsWith('"') && finalResult.endsWith('"')) || 
+          (finalResult.startsWith("'") && finalResult.endsWith("'"))) {
+        finalResult = finalResult.slice(1, -1).trim();
+      }
+    }
+    return finalResult;
+  }
+
   async paraphrase(text: string): Promise<string> {
-    const prompt = `Paraphrase the following text to make it sound more natural and fluent. Only output the paraphrased text, nothing else. Text: "${text}"`;
-    return await this.aiRequest(prompt);
+    const prompt = `Paraphrase the following text to make it sound more natural and fluent, while STRICTLY preserving its exact original meaning and nuances. If the text is a single word and is already spelled correctly, DO NOT change it. Do not alter the core intent, and do not change specific idioms or fixed phrases unless absolutely necessary for naturalness. Only output the paraphrased text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
+    let result = await this.aiRequest(prompt);
+    return this.stripUnwantedQuotes(text, result);
   }
 
   async changeTone(text: string, tone: ToneType): Promise<string> {
-    const prompt = `Rewrite the following text in a ${tone.toLowerCase()} tone. Only output the rewritten text, nothing else. Text: "${text}"`;
-    return await this.aiRequest(prompt);
+    const prompt = `Rewrite the following text in a ${tone.toLowerCase()} tone. Only output the rewritten text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
+    let result = await this.aiRequest(prompt);
+    return this.stripUnwantedQuotes(text, result);
   }
 
   async continueText(text: string): Promise<string> {
-    const prompt = `Continue the following text naturally for a few sentences. Only output the continuation, do not repeat the original text. Text: "${text}"`;
-    return await this.aiRequest(prompt);
+    const prompt = `Continue the following text naturally for a few sentences. Only output the continuation, do not repeat the original text. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
+    let result = await this.aiRequest(prompt);
+    return this.stripUnwantedQuotes(text, result);
   }
 
   async runCustomPrompt(text: string, userPrompt: string): Promise<string> {
-    const prompt = `${userPrompt}\n\nText: "${text}"`;
+    const prompt = `${userPrompt}\n\nText:\n${text}`;
     return await this.aiRequest(prompt);
+  }
+
+  async translate(text: string): Promise<string> {
+    const prompt = `Translate the following text to Vietnamese if it's in English, or to English if it's in Vietnamese. Only output the translated text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
+    let result = await this.aiRequest(prompt);
+    return this.stripUnwantedQuotes(text, result);
   }
 
   async refineAndTranslate(

@@ -10,19 +10,13 @@
   "commands": [
     {
       "name": "improve-selected-text",
-      "title": "Improve Selected Text",
-      "description": "Grab the currently selected text and improve it using AI.",
-      "mode": "view"
-    },
-    {
-      "name": "refine-and-translate",
-      "title": "Refine & Translate",
-      "description": "Refine selected or inputted text and translate it to English/Vietnamese.",
+      "title": "Translator",
+      "description": "Refine, translate, fix grammar, and improve your text with AI.",
       "mode": "view",
       "arguments": [
         {
           "name": "text",
-          "placeholder": "Text to refine & translate...",
+          "placeholder": "Type text to fix, translate, or rewrite...",
           "type": "text",
           "required": false
         }
@@ -30,7 +24,7 @@
     },
     {
       "name": "history",
-      "title": "Grammar Pro History",
+      "title": "History",
       "description": "View your grammar improvement history.",
       "mode": "view"
     },
@@ -41,9 +35,9 @@
       "mode": "view"
     },
     {
-      "name": "fix-inline",
-      "title": "Fix Grammar Inline",
-      "description": "Silently fix grammar of selected text and replace it directly.",
+      "name": "refine-inline",
+      "title": "Refine Inline",
+      "description": "Silently refine selected text to make it natural and clear, and replace it directly.",
       "mode": "no-view"
     },
     {
