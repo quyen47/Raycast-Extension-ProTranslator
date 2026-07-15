@@ -30,7 +30,9 @@ export default function QuickAddCommand() {
           const ai = new AIModule(config);
           const rawResponse = await ai.defineWord(cleanText);
           try {
-            const parsed = JSON.parse(rawResponse.replace(/```json/g, "").replace(/```/g, ""));
+            const parsed = JSON.parse(
+              rawResponse.replace(/```json/g, "").replace(/```/g, ""),
+            );
             if (isMounted) {
               setDefinition(parsed.definition || rawResponse);
               if (parsed.example) {
@@ -68,5 +70,11 @@ export default function QuickAddCommand() {
     return <Detail markdown={`⚠️ Error: ${error}`} />;
   }
 
-  return <FlashcardForm initialTerm={term} initialDefinition={definition} initialExample={example} />;
+  return (
+    <FlashcardForm
+      initialTerm={term}
+      initialDefinition={definition}
+      initialExample={example}
+    />
+  );
 }

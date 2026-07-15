@@ -1,6 +1,6 @@
 export function levenshteinDistance(a: string, b: string): number {
   const matrix = Array.from({ length: a.length + 1 }, () =>
-    new Array(b.length + 1).fill(0)
+    new Array(b.length + 1).fill(0),
   );
 
   for (let i = 0; i <= a.length; i++) {
@@ -17,8 +17,8 @@ export function levenshteinDistance(a: string, b: string): number {
       } else {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i][j - 1] + 1, // insertion
+          matrix[i - 1][j] + 1, // deletion
         );
       }
     }
@@ -36,17 +36,21 @@ export function normalizeString(str: string): string {
     .trim();
 }
 
-export function isCloseMatch(userAnswer: string, expectedAnswer: string): boolean {
+export function isCloseMatch(
+  userAnswer: string,
+  expectedAnswer: string,
+): boolean {
   const normalizedUser = normalizeString(userAnswer);
   const normalizedExpected = normalizeString(expectedAnswer);
 
   if (normalizedUser === normalizedExpected) return true;
-  if (normalizedUser.length === 0 || normalizedExpected.length === 0) return false;
+  if (normalizedUser.length === 0 || normalizedExpected.length === 0)
+    return false;
 
   const distance = levenshteinDistance(normalizedUser, normalizedExpected);
-  
+
   // Allow 1 typo for short words (<= 5 chars), 2 typos for longer words
   const maxDistance = normalizedExpected.length <= 5 ? 1 : 2;
-  
+
   return distance <= maxDistance;
 }

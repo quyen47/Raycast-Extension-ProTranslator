@@ -26,21 +26,37 @@ type InsightData = {
   translation?: string;
 };
 
-function StoryScreen({ words, topic, onSave }: { words: Flashcard[]; topic: string; onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void }) {
-  const [data, setData] = useState<{ english_text: string; vietnamese_translation: string } | null>(null);
+function StoryScreen({
+  words,
+  topic,
+  onSave,
+}: {
+  words: Flashcard[];
+  topic: string;
+  onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void;
+}) {
+  const [data, setData] = useState<{
+    english_text: string;
+    vietnamese_translation: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     async function run() {
       try {
         const config = getProviderConfig();
-        if (!config.apiKey) throw new Error("Please set API key in preferences.");
+        if (!config.apiKey)
+          throw new Error("Please set API key in preferences.");
         const ai = new AIModule(config);
-        const res = await ai.generateStory(words.map(w => ({ term: w.term, definition: w.definition })), topic);
-        const parsed = JSON.parse(res.replace(/```json/g, "").replace(/```/g, ""));
+        const res = await ai.generateStory(
+          words.map((w) => ({ term: w.term, definition: w.definition })),
+          topic,
+        );
+        const parsed = JSON.parse(
+          res.replace(/```json/g, "").replace(/```/g, ""),
+        );
         if (isMounted) {
           setData(parsed);
           setIsLoading(false);
@@ -48,7 +64,10 @@ function StoryScreen({ words, topic, onSave }: { words: Flashcard[]; topic: stri
             topic: topic || "Daily Story",
             english_text: parsed.english_text,
             vietnamese_translation: parsed.vietnamese_translation,
-            words: words.map(w => ({ term: w.term, definition: w.definition })),
+            words: words.map((w) => ({
+              term: w.term,
+              definition: w.definition,
+            })),
           });
           setSaved(true);
         }
@@ -60,12 +79,15 @@ function StoryScreen({ words, topic, onSave }: { words: Flashcard[]; topic: stri
       }
     }
     run();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [words, topic]);
 
   if (error) return <Detail markdown={`⚠️ Lỗi khi tạo bài đọc: ${error}`} />;
 
-  const markdown = data ? `
+  const markdown = data
+    ? `
 ${data.english_text}
 
 ---
@@ -74,12 +96,21 @@ ${data.vietnamese_translation}
 
 ---
 ### 📚 Từ vựng trong bài
-` + words.map(w => "- **" + w.term + "**: " + w.definition).join("\n") : "✨ Tác giả AI đang suy nghĩ cốt truyện và viết nháp...";
+` + words.map((w) => "- **" + w.term + "**: " + w.definition).join("\n")
+    : "✨ Tác giả AI đang suy nghĩ cốt truyện và viết nháp...";
 
   return <Detail isLoading={isLoading} markdown={markdown} />;
 }
 
-function StoryPromptForm({ activeCards, dueCards, onSave }: { activeCards: Flashcard[]; dueCards: Flashcard[]; onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void }) {
+function StoryPromptForm({
+  activeCards,
+  dueCards,
+  onSave,
+}: {
+  activeCards: Flashcard[];
+  dueCards: Flashcard[];
+  onSave: (data: Omit<SavedStory, "id" | "createdAt">) => void;
+}) {
   const { push } = useNavigation();
   const [topic, setTopic] = useState("");
   const [pool, setPool] = useState("due");
@@ -88,7 +119,10 @@ function StoryPromptForm({ activeCards, dueCards, onSave }: { activeCards: Flash
   function handleSubmit() {
     const source = pool === "due" ? dueCards : activeCards;
     if (source.length === 0) {
-      showToast({ title: "Không có từ vựng nào trong danh sách này.", style: Toast.Style.Failure });
+      showToast({
+        title: "Không có từ vựng nào trong danh sách này.",
+        style: Toast.Style.Failure,
+      });
       return;
     }
     const count = parseInt(wordCount, 10);
@@ -108,17 +142,39 @@ function StoryPromptForm({ activeCards, dueCards, onSave }: { activeCards: Flash
       }
     >
       <Form.Description text="Tạo một bài đọc tiếng Anh từ các từ vựng của bạn để ôn tập theo ngữ cảnh." />
-      <Form.Dropdown id="pool" title="Nguồn từ vựng" value={pool} onChange={setPool}>
-        <Form.Dropdown.Item value="due" title={"Đến hạn ôn tập (" + dueCards.length + " từ)"} />
-        <Form.Dropdown.Item value="all" title={"Tất cả từ vựng (" + activeCards.length + " từ)"} />
+      <Form.Dropdown
+        id="pool"
+        title="Nguồn từ vựng"
+        value={pool}
+        onChange={setPool}
+      >
+        <Form.Dropdown.Item
+          value="due"
+          title={"Đến hạn ôn tập (" + dueCards.length + " từ)"}
+        />
+        <Form.Dropdown.Item
+          value="all"
+          title={"Tất cả từ vựng (" + activeCards.length + " từ)"}
+        />
       </Form.Dropdown>
-      <Form.Dropdown id="count" title="Số lượng từ" value={wordCount} onChange={setWordCount}>
+      <Form.Dropdown
+        id="count"
+        title="Số lượng từ"
+        value={wordCount}
+        onChange={setWordCount}
+      >
         <Form.Dropdown.Item value="5" title="5 từ (Ngắn gọn)" />
         <Form.Dropdown.Item value="10" title="10 từ (Vừa đủ)" />
         <Form.Dropdown.Item value="15" title="15 từ (Khá dài)" />
         <Form.Dropdown.Item value="20" title="20 từ (Dài)" />
       </Form.Dropdown>
-      <Form.TextField id="topic" title="Chủ đề (Tuỳ chọn)" placeholder="VD: Khoa học vũ trụ, Chuyện kinh dị, Tình yêu..." value={topic} onChange={setTopic} />
+      <Form.TextField
+        id="topic"
+        title="Chủ đề (Tuỳ chọn)"
+        placeholder="VD: Khoa học vũ trụ, Chuyện kinh dị, Tình yêu..."
+        value={topic}
+        onChange={setTopic}
+      />
     </Form>
   );
 }
@@ -351,7 +407,7 @@ function QuizScreen({
       onNext(isAnswerCorrect);
       return;
     }
-    
+
     if (insightData) {
       push(
         <InsightScreen
@@ -370,7 +426,8 @@ function QuizScreen({
 
     // If guessing the TERM (vocab), we require strict matching to enforce correct spelling.
     if (!isReverse) {
-      const isCorrect = userAnswer.trim().toLowerCase() === expectedAnswer.trim().toLowerCase();
+      const isCorrect =
+        userAnswer.trim().toLowerCase() === expectedAnswer.trim().toLowerCase();
       setIsAnswerCorrect(isCorrect);
       setShowResult(true);
       setAiFeedback(undefined);
@@ -393,17 +450,20 @@ function QuizScreen({
 
     // AI Semantic Path
     setIsGrading(true);
-    const toast = await showToast({ style: Toast.Style.Animated, title: "🧠 AI is grading..." });
+    const toast = await showToast({
+      style: Toast.Style.Animated,
+      title: "🧠 AI is grading...",
+    });
     try {
       const config = getProviderConfig();
       if (!config.apiKey) throw new Error("API key not set");
       const ai = new AIModule(config);
       const grade = await ai.gradeAnswer(expectedAnswer, userAnswer);
-      
+
       setIsAnswerCorrect(grade.isCorrect);
       setAiFeedback(grade.feedback);
       setShowResult(true);
-      
+
       if (grade.isCorrect) {
         toast.style = Toast.Style.Success;
         toast.title = "Correct!";
@@ -613,7 +673,10 @@ export default function PracticeCommand() {
       }
     >
       {mode === "stories" && (
-        <List.Section title="Saved Stories" subtitle={`${stories.length} stories`}>
+        <List.Section
+          title="Saved Stories"
+          subtitle={`${stories.length} stories`}
+        >
           {stories.length === 0 ? (
             <List.EmptyView title="No saved stories yet" icon={Icon.Book} />
           ) : (
@@ -627,10 +690,17 @@ export default function PracticeCommand() {
                     markdown={`# ${story.topic}\n\n${story.english_text}\n\n---\n\n### 🇻🇳 Bản dịch\n${story.vietnamese_translation}`}
                     metadata={
                       <List.Item.Detail.Metadata>
-                        <List.Item.Detail.Metadata.Label title="Created" text={new Date(story.createdAt).toLocaleString()} />
+                        <List.Item.Detail.Metadata.Label
+                          title="Created"
+                          text={new Date(story.createdAt).toLocaleString()}
+                        />
                         <List.Item.Detail.Metadata.Separator />
                         {story.words.map((w, idx) => (
-                          <List.Item.Detail.Metadata.Label key={idx} title={w.term} text={w.definition} />
+                          <List.Item.Detail.Metadata.Label
+                            key={idx}
+                            title={w.term}
+                            text={w.definition}
+                          />
                         ))}
                       </List.Item.Detail.Metadata>
                     }
@@ -677,7 +747,13 @@ export default function PracticeCommand() {
                   <Action.Push
                     title="Generate Story with AI"
                     icon={Icon.TextDocument}
-                    target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
+                    target={
+                      <StoryPromptForm
+                        activeCards={data}
+                        dueCards={getActiveCards("due")}
+                        onSave={addStory}
+                      />
+                    }
                   />
                   <Action.Push
                     title="Create Flashcard"
@@ -705,14 +781,29 @@ export default function PracticeCommand() {
                     markdown={`# ${card.term}\n\n**Meaning:** ${card.definition}\n\n${card.example ? `**Example:**\n\n${card.example}` : ""}`}
                     metadata={
                       <List.Item.Detail.Metadata>
-                        <List.Item.Detail.Metadata.Label title="Interval" text={`${card.interval} days`} />
-                        <List.Item.Detail.Metadata.Label title="Ease Factor" text={card.easeFactor?.toString()} />
-                        <List.Item.Detail.Metadata.Label title="Correct" text={card.correctCount.toString()} />
-                        <List.Item.Detail.Metadata.Label title="Wrong" text={card.wrongCount.toString()} />
+                        <List.Item.Detail.Metadata.Label
+                          title="Interval"
+                          text={`${card.interval} days`}
+                        />
+                        <List.Item.Detail.Metadata.Label
+                          title="Ease Factor"
+                          text={card.easeFactor?.toString()}
+                        />
+                        <List.Item.Detail.Metadata.Label
+                          title="Correct"
+                          text={card.correctCount.toString()}
+                        />
+                        <List.Item.Detail.Metadata.Label
+                          title="Wrong"
+                          text={card.wrongCount.toString()}
+                        />
                         {card.insights && card.insights.length > 0 && (
                           <>
                             <List.Item.Detail.Metadata.Separator />
-                            <List.Item.Detail.Metadata.Label title="AI Insights Cached" text={card.insights.length.toString()} />
+                            <List.Item.Detail.Metadata.Label
+                              title="AI Insights Cached"
+                              text={card.insights.length.toString()}
+                            />
                           </>
                         )}
                       </List.Item.Detail.Metadata>
@@ -733,7 +824,7 @@ export default function PracticeCommand() {
                       onAction={() => startQuiz("due")}
                     />
                     <Action
-                      title="Start Cram Quiz (All)"
+                      title="Start Cram Quiz (all)"
                       icon={Icon.Forward}
                       onAction={() => startQuiz("all")}
                     />
@@ -741,7 +832,13 @@ export default function PracticeCommand() {
                       title="Generate Story with AI"
                       icon={Icon.TextDocument}
                       shortcut={{ modifiers: ["cmd"], key: "g" }}
-                      target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
+                      target={
+                        <StoryPromptForm
+                          activeCards={data}
+                          dueCards={getActiveCards("due")}
+                          onSave={addStory}
+                        />
+                      }
                     />
                     <Action.Push
                       title="Create Flashcard"
@@ -786,7 +883,7 @@ export default function PracticeCommand() {
                   />
                 )}
                 <Action
-                  title="Start Cram Quiz (All Cards)"
+                  title="Start Cram Quiz (all Cards)"
                   icon={Icon.Forward}
                   onAction={() => startQuiz("all")}
                 />
@@ -794,7 +891,13 @@ export default function PracticeCommand() {
                   title="Generate Story with AI"
                   icon={Icon.TextDocument}
                   shortcut={{ modifiers: ["cmd"], key: "g" }}
-                  target={<StoryPromptForm activeCards={data} dueCards={getActiveCards("due")} onSave={addStory} />}
+                  target={
+                    <StoryPromptForm
+                      activeCards={data}
+                      dueCards={getActiveCards("due")}
+                      onSave={addStory}
+                    />
+                  }
                 />
               </ActionPanel>
             }

@@ -83,14 +83,16 @@ Do not include any markdown formatting or backticks outside the JSON. Text: "${t
   private stripUnwantedQuotes(original: string, result: string): string {
     let finalResult = result.trim();
     const origTrimmed = original.trim();
-    
-    const originalHasQuotes = 
-      (origTrimmed.startsWith('"') && origTrimmed.endsWith('"')) || 
+
+    const originalHasQuotes =
+      (origTrimmed.startsWith('"') && origTrimmed.endsWith('"')) ||
       (origTrimmed.startsWith("'") && origTrimmed.endsWith("'"));
 
     if (!originalHasQuotes) {
-      if ((finalResult.startsWith('"') && finalResult.endsWith('"')) || 
-          (finalResult.startsWith("'") && finalResult.endsWith("'"))) {
+      if (
+        (finalResult.startsWith('"') && finalResult.endsWith('"')) ||
+        (finalResult.startsWith("'") && finalResult.endsWith("'"))
+      ) {
         finalResult = finalResult.slice(1, -1).trim();
       }
     }
@@ -99,19 +101,19 @@ Do not include any markdown formatting or backticks outside the JSON. Text: "${t
 
   async paraphrase(text: string): Promise<string> {
     const prompt = `Paraphrase the following text to make it sound more natural and fluent, while STRICTLY preserving its exact original meaning and nuances. If the text is a single word and is already spelled correctly, DO NOT change it. Do not alter the core intent, and do not change specific idioms or fixed phrases unless absolutely necessary for naturalness. Only output the paraphrased text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
-    let result = await this.aiRequest(prompt);
+    const result = await this.aiRequest(prompt);
     return this.stripUnwantedQuotes(text, result);
   }
 
   async changeTone(text: string, tone: ToneType): Promise<string> {
     const prompt = `Rewrite the following text in a ${tone.toLowerCase()} tone. Only output the rewritten text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
-    let result = await this.aiRequest(prompt);
+    const result = await this.aiRequest(prompt);
     return this.stripUnwantedQuotes(text, result);
   }
 
   async continueText(text: string): Promise<string> {
     const prompt = `Continue the following text naturally for a few sentences. Only output the continuation, do not repeat the original text. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
-    let result = await this.aiRequest(prompt);
+    const result = await this.aiRequest(prompt);
     return this.stripUnwantedQuotes(text, result);
   }
 
@@ -122,7 +124,7 @@ Do not include any markdown formatting or backticks outside the JSON. Text: "${t
 
   async translate(text: string): Promise<string> {
     const prompt = `Translate the following text to Vietnamese if it's in English, or to English if it's in Vietnamese. Only output the translated text, nothing else. Do not wrap your output in quotes unless the original text has them. Text:\n${text}`;
-    let result = await this.aiRequest(prompt);
+    const result = await this.aiRequest(prompt);
     return this.stripUnwantedQuotes(text, result);
   }
 
@@ -192,10 +194,17 @@ Return ONLY a valid JSON object in this format (no markdown code blocks):
     return await this.aiRequest(prompt);
   }
 
-  async generateStory(words: { term: string; definition: string }[], topic: string): Promise<string> {
-    const wordList = words.map((w) => `- ${w.term} (${w.definition})`).join("\\n");
-    const topicInstruction = topic ? `The theme/topic of the story MUST BE: "${topic}".` : "You can choose any engaging and informative topic.";
-    
+  async generateStory(
+    words: { term: string; definition: string }[],
+    topic: string,
+  ): Promise<string> {
+    const wordList = words
+      .map((w) => `- ${w.term} (${w.definition})`)
+      .join("\\n");
+    const topicInstruction = topic
+      ? `The theme/topic of the story MUST BE: "${topic}".`
+      : "You can choose any engaging and informative topic.";
+
     const prompt = `You are an expert English teacher and creative writer.
 I have a list of vocabulary words that I am learning:
 ${wordList}
@@ -215,7 +224,10 @@ Requirements:
     return await this.aiRequest(prompt, 2); // 2 retries max for speed
   }
 
-  async gradeAnswer(target: string, userAnswer: string): Promise<{ isCorrect: boolean; feedback: string }> {
+  async gradeAnswer(
+    target: string,
+    userAnswer: string,
+  ): Promise<{ isCorrect: boolean; feedback: string }> {
     const prompt = `Act as a strict but fair English teacher grading a vocabulary flashcard quiz.
 The correct target answer is: "${target}"
 The student typed: "${userAnswer}"

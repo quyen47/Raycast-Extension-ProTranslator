@@ -38,18 +38,21 @@ export function useStories() {
     });
   }, []);
 
-  const addStory = useCallback(async (storyData: Omit<SavedStory, "id" | "createdAt">) => {
-    setStories((prev) => {
-      const newStory: SavedStory = {
-        ...storyData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      };
-      const updated = [newStory, ...prev];
-      saveStories(updated);
-      return updated;
-    });
-  }, []);
+  const addStory = useCallback(
+    async (storyData: Omit<SavedStory, "id" | "createdAt">) => {
+      setStories((prev) => {
+        const newStory: SavedStory = {
+          ...storyData,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        };
+        const updated = [newStory, ...prev];
+        saveStories(updated);
+        return updated;
+      });
+    },
+    [],
+  );
 
   const removeStory = useCallback(async (id: string) => {
     setStories((prev) => {
