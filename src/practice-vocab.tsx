@@ -15,6 +15,7 @@ import { Flashcard } from "./types";
 import { AIModule, getProviderConfig } from "./utils/providerUtil";
 import { playAudio } from "./utils/audioUtil";
 import { useStories, SavedStory } from "./utils/storyUtil";
+import { isCloseMatch } from "./utils/stringUtil";
 import FlashcardForm from "./components/FlashcardForm";
 
 type InsightData = {
@@ -324,28 +325,34 @@ function QuizScreen({
   flashcard,
   onNext,
   addInsight,
+  insightData,
 }: {
   flashcard: Flashcard;
   onNext: (isCorrect: boolean) => void;
   addInsight: (id: string, insight: string) => Promise<void>;
+  insightData?: InsightData;
 }) {
   const { push, pop } = useNavigation();
   const [error, setError] = useState<string | undefined>();
   const [showResult, setShowResult] = useState(false);
   const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
   const [userAnswer, setUserAnswer] = useState("");
+  const [isGrading, setIsGrading] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<string>();
 
   // Randomly decide which side to show
-  // false = show definition, guess term
-  // true = show term, guess definition
   const [isReverse] = useState(() => Math.random() > 0.5);
 
   const questionText = isReverse ? flashcard.term : flashcard.definition;
   const expectedAnswer = isReverse ? flashcard.definition : flashcard.term;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (showResult) {
-      // Proceed to Insight Screen before next card
+      onNext(isAnswerCorrect);
+      return;
+    }
+    
+    if (insightData) {
       push(
         <InsightScreen
           flashcard={flashcard}
@@ -361,19 +368,43 @@ function QuizScreen({
       return;
     }
 
-    const isCorrect =
-      userAnswer.trim().toLowerCase() === expectedAnswer.toLowerCase();
-    setIsAnswerCorrect(isCorrect);
-    setShowResult(true);
-
-    if (isCorrect) {
+    // Fast path
+    if (isCloseMatch(userAnswer, expectedAnswer)) {
+      setIsAnswerCorrect(true);
+      setShowResult(true);
+      setAiFeedback(undefined);
       showToast({ style: Toast.Style.Success, title: "Correct!" });
-    } else {
-      showToast({
-        style: Toast.Style.Failure,
-        title: "Incorrect",
-        message: `Correct answer: ${expectedAnswer}`,
-      });
+      return;
+    }
+
+    // AI Semantic Path
+    setIsGrading(true);
+    const toast = await showToast({ style: Toast.Style.Animated, title: "🧠 AI is grading..." });
+    try {
+      const config = getProviderConfig();
+      if (!config.apiKey) throw new Error("API key not set");
+      const ai = new AIModule(config);
+      const grade = await ai.gradeAnswer(expectedAnswer, userAnswer);
+      
+      setIsAnswerCorrect(grade.isCorrect);
+      setAiFeedback(grade.feedback);
+      setShowResult(true);
+      
+      if (grade.isCorrect) {
+        toast.style = Toast.Style.Success;
+        toast.title = "Correct!";
+      } else {
+        toast.style = Toast.Style.Failure;
+        toast.title = "Incorrect";
+      }
+    } catch (err) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Error grading answer";
+      setIsAnswerCorrect(false);
+      setAiFeedback(undefined);
+      setShowResult(true);
+    } finally {
+      setIsGrading(false);
     }
   }
 
@@ -431,6 +462,9 @@ function QuizScreen({
                 : `❌ Incorrect! The right answer is: ${expectedAnswer}`
             }
           />
+          {aiFeedback && (
+            <Form.Description text={`🧠 AI Feedback: ${aiFeedback}`} />
+          )}
           {flashcard.example && (
             <Form.Description text={`💡 Example: ${flashcard.example}`} />
           )}
@@ -443,7 +477,7 @@ function QuizScreen({
         <Form.TextField
           id="answer"
           title="Your Answer"
-          placeholder="Type here..."
+          placeholder={isGrading ? "🧠 AI is grading..." : "Type here..."}
           value={userAnswer}
           error={error}
           onChange={(val) => {
@@ -591,6 +625,12 @@ export default function PracticeCommand() {
                 actions={
                   <ActionPanel>
                     <Action
+                      title="Listen to Story"
+                      icon={Icon.SpeakerOn}
+                      shortcut={{ modifiers: ["cmd"], key: "p" }}
+                      onAction={() => playAudio(story.english_text)}
+                    />
+                    <Action
                       title="Delete Story"
                       icon={Icon.Trash}
                       style={Action.Style.Destructive}
@@ -667,6 +707,12 @@ export default function PracticeCommand() {
                 }
                 actions={
                   <ActionPanel>
+                    <Action
+                      title="Listen to Word"
+                      icon={Icon.SpeakerOn}
+                      shortcut={{ modifiers: ["cmd"], key: "p" }}
+                      onAction={() => playAudio(card.term)}
+                    />
                     <Action
                       title="Start Due Cards Quiz"
                       icon={Icon.Play}

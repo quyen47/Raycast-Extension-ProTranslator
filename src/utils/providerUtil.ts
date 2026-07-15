@@ -157,7 +157,7 @@ Return this JSON format:
 Return ONLY a valid JSON object in this format (no markdown code blocks):
 {
   "definition": "Nghĩa tiếng Việt ngắn gọn nhất có thể. DO NOT put a period (.) at the end.",
-  "example": "Loại từ: (noun/verb/...)\\nPhát âm: /IPA/\\nVí dụ: English sentence.\\nDịch: Vietnamese translation."
+  "example": "Loại từ: (noun/verb/...)\\nPhát âm: /IPA/\\nSắc thái nghĩa: (Giải thích ngắn gọn sắc thái, văn cảnh sử dụng, mức độ trang trọng)\\nVí dụ: English sentence.\\nDịch: Vietnamese translation."
 }`;
     return await this.aiRequest(prompt);
   }
@@ -183,6 +183,31 @@ Requirements:
   "vietnamese_translation": "A high-quality Vietnamese translation of the entire passage to help the learner."
 }`;
     return await this.aiRequest(prompt, 2); // 2 retries max for speed
+  }
+
+  async gradeAnswer(target: string, userAnswer: string): Promise<{ isCorrect: boolean; feedback: string }> {
+    const prompt = `Act as a strict but fair English teacher grading a vocabulary flashcard quiz.
+The correct target answer is: "${target}"
+The student typed: "${userAnswer}"
+
+Evaluate if the student's answer is semantically correct and demonstrates understanding of the target word/phrase. 
+Rules:
+1. Exact synonyms are correct (e.g. "huge" for "gigantic").
+2. Slight grammatical variations are correct (e.g. "running" for "run").
+3. Completely different meanings or opposite meanings are incorrect.
+4. If it's correct but a different word, provide encouraging feedback.
+
+Return ONLY a valid JSON object in this format (no markdown code blocks):
+{
+  "isCorrect": true/false,
+  "feedback": "A very short explanation (max 1 sentence) of why it is correct or incorrect."
+}`;
+    const res = await this.aiRequest(prompt, 2);
+    try {
+      return JSON.parse(res.replace(/```json/g, "").replace(/```/g, ""));
+    } catch {
+      return { isCorrect: false, feedback: "AI grading failed to parse." };
+    }
   }
 
   private async aiRequest(prompt: string, retries = 3): Promise<string> {
