@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI from "openai/index.mjs";
 import { ToneType, ProviderConfig, ProviderType } from "../types";
 import { getPrefs } from "../utils";
 
